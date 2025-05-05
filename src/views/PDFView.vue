@@ -68,6 +68,10 @@ export default {
 			return true
 		},
 
+		isRichDocumentsAvailable() {
+			return 'richdocuments' in OC.appswebroots
+		},
+
 		isEditable() {
 			return this.file?.permissions?.indexOf('W') >= 0
 		},
