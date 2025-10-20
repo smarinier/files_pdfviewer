@@ -14,11 +14,6 @@ import { getLanguage } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 import logger from '../services/logger.js'
 import uploadPdfFile from '../services/uploadPdfFile.js'
-import axios from '@nextcloud/axios'
-import { getGuestNickname } from '@nextcloud/auth'
-import { getSharingToken } from '@nextcloud/sharing/public'
-import { importKey, decryptChunk } from '../utils/crypto.js'
-import { basename, dirname } from '@nextcloud/paths'
 
 export default {
 	name: 'PDFView',
@@ -27,13 +22,6 @@ export default {
 		return {
 			// Not all fields are reactive!
 			PDFViewerApplication: null,
-			transfer: {
-				access_token: null,
-				fileid: null,
-				fileSize: 0,
-				version: 0,
-				key: null,
-			},
 		}
 	},
 
@@ -75,17 +63,34 @@ export default {
 		isEditable() {
 			return this.file?.permissions?.indexOf('W') >= 0
 		},
-
-		shareToken() {
-			return getSharingToken()
-		},
 	},
 
 	async mounted() {
-		if (!this.isDownloadable || this.hideDownload) {
-			this.transfer.fileid = this.fileid ?? basename(dirname(this.source))
-			this.transfer.version = this.fileid ? 0 : basename(this.source)
+		/* do not use RichDocuments as fallback anymore
+
+		if (!this.isDownloadable || (this.hideDownload && this.isRichDocumentsAvailable)) {
+			this.doneLoading()
+
+			if (this.isRichDocumentsAvailable) {
+				console.info('PDF file is not downloadable or has a hidden download, but "richdocuments" is available, so falling back to it')
+
+				// Opening the viewer again overwrites its current state, so the
+				// current options need to be explicitly passed again.
+				OCA.Viewer.openWith('richdocuments', {
+					fileInfo: this.file,
+					list: OCA.Viewer.list,
+					enableSidebar: OCA.Viewer.enableSidebar,
+					loadMore: OCA.Viewer.loadMore,
+					canLoop: OCA.Viewer.canLoop,
+					onPrev: OCA.Viewer.onPrev,
+					onNext: OCA.Viewer.onNext,
+					onClose: OCA.Viewer.onClose,
+				})
+			}
+
+			return
 		}
+		*/
 
 		document.addEventListener('webviewerloaded', this.handleWebviewerloaded)
 
@@ -139,7 +144,6 @@ export default {
 			PDFViewerApplicationOptions.set('enablePermissions', true)
 			PDFViewerApplicationOptions.set('imageResourcesPath', this.getViewerTemplateParameter('imageresourcespath'))
 			PDFViewerApplicationOptions.set('enableScripting', this.getViewerTemplateParameter('enableScripting') === true)
-			PDFViewerApplicationOptions.set('defaultUrl', null)
 
 			const language = getLanguage()
 			const supportedLanguages = SUPPORTED_LANGUAGES
@@ -171,7 +175,6 @@ export default {
 
 		initializePDFViewerApplication() {
 			this.PDFViewerApplication = this.$refs.iframe.contentWindow.PDFViewerApplication
-			const PDFViewerApplicationConstants = this.$refs.iframe.contentWindow.PDFViewerApplicationConstants
 
 			this.PDFViewerApplication.save = this.handleSave
 
@@ -194,19 +197,9 @@ export default {
 				}
 			})
 
-			const spreadMode = this.getViewerTemplateParameter('spreadmode') ?? 'none'
-			switch (spreadMode) {
-			case 'odd':
-				this.PDFViewerApplication.pdfViewer.spreadMode = PDFViewerApplicationConstants.SpreadMode.ODD
-				break
-			case 'even':
-				this.PDFViewerApplication.pdfViewer.spreadMode = PDFViewerApplicationConstants.SpreadMode.EVEN
-				break
-			}
-
 			if (this.hideDownload) {
-
 				const pdfViewer = this.getIframeDocument().querySelector('.pdfViewer')
+
 				if (pdfViewer) {
 					pdfViewer.classList.add('disabledTextSelection')
 				}
@@ -236,9 +229,6 @@ export default {
 				}
 
 				logger.info('Download, print and user interaction disabled')
-
-				this.chunkLoadFile()
-
 			} else {
 				logger.info('Download and print available')
 			}
@@ -287,70 +277,6 @@ export default {
 				downloadElement.removeAttribute('disabled')
 			}).finally(() => {
 				downloadElement.classList.remove('icon-loading-small')
-			})
-		},
-
-		chunkLoadFile() {
-			const chunkAPI = '/apps/files_pdfviewer/chunk/files'
-			const pdfjsLib = this.$refs.iframe.contentWindow.pdfjsLib || {}
-			const PDFViewerApplication = this.PDFViewerApplication
-			const transfer = this.transfer
-
-			pdfjsLib.GlobalWorkerOptions.workerSrc = this.getViewerTemplateParameter('workersrc')
-
-			// Disable opening file by URL -> load later with chunked transfer
-			PDFViewerApplication.open = () => {
-			}
-
-			// Get Transfer token
-			axios.post(generateUrl(`${chunkAPI}/${this.transfer.fileid}/transfer`), {
-				shareToken: this.shareToken,
-				version: this.transfer.version,
-				guestName: getGuestNickname(),
-			}).then(async (response) => {
-				// Initialize transfer parameters
-				transfer.access_token = response.data.token
-				transfer.fileSize = parseInt(response.data.size, 10)
-				transfer.key = response.data.key
-
-				console.info('Opening file in chunk secured mode, size:', transfer.fileSize)
-
-				const transport = new pdfjsLib.PDFDataRangeTransport(transfer.fileSize, new Uint8Array([]))
-				const finalKey = await importKey(this.transfer.key)
-
-				let transferredBytes = 0
-				transport.requestDataRange = async function(begin, end) {
-					// Called on each range bloc
-					logger.info(`Requesting bytes from ${begin} to ${end - 1}`)
-					const response = await axios.get(generateUrl(`${chunkAPI}/${transfer.fileid}/contents`), {
-						headers: {
-							Range: `bytes=${begin}-${end - 1}`,
-						},
-						params: {
-							access_token: transfer.access_token,
-						},
-						responseType: 'arraybuffer',
-					})
-
-					const chunk = new Uint8Array(response.data)
-					const decrypted = await decryptChunk(chunk, finalKey)
-					transferredBytes += decrypted.length
-
-					transport.onDataProgress(transferredBytes, transfer.fileSize)
-					transport.onDataRange(begin, decrypted)
-				}
-
-				const loadingTask = pdfjsLib.getDocument({ range: transport })
-				loadingTask.promise.then((pdf) =>
-					PDFViewerApplication.load(pdf),
-				).catch((error) => {
-					logger.error('Error loading PDF document:', error)
-					showError(t('files_pdfviewer', 'Failed to load PDF file : ' + error.message))
-				})
-
-			}).catch((error) => {
-				logger.error('Error initializing chunked transfer:', error)
-				showError(t('files_pdfviewer', 'Failed to load PDF file: ' + error.message))
 			})
 		},
 	},
