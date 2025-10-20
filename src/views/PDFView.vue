@@ -3,15 +3,9 @@
   - SPDX-License-Identifier: AGPL-3.0-or-later
   -->
 <template>
-	<iframe
-		v-if="isDownloadable"
-		ref="iframe"
+	<iframe ref="iframe"
 		:src="iframeSrc"
 		@load="onIFrameLoaded" />
-	<div v-else-if="!isRichDocumentsAvailable" id="emptycontent">
-		<div class="icon-error" />
-		<h3>{{ t('files_pdfviewer', 'To view a shared PDF file, the download needs to be allowed for this file share') }}</h3>
-	</div>
 </template>
 
 <script>
@@ -44,10 +38,11 @@ export default {
 		},
 
 		hideDownload() {
-			return this.file.hideDownload
+			return this.file.hideDownload || !this.isDownloadable
 		},
 
 		isDownloadable() {
+
 			if (!this.file.shareAttributes) {
 				return true
 			}
@@ -71,11 +66,13 @@ export default {
 	},
 
 	async mounted() {
+		/* do not use RichDocuments as fallback anymore
+
 		if (!this.isDownloadable || (this.hideDownload && this.isRichDocumentsAvailable)) {
 			this.doneLoading()
 
 			if (this.isRichDocumentsAvailable) {
-				logger.info('PDF file is not downloadable or has a hidden download, but "richdocuments" is available, so falling back to it')
+				console.info('PDF file is not downloadable or has a hidden download, but "richdocuments" is available, so falling back to it')
 
 				// Opening the viewer again overwrites its current state, so the
 				// current options need to be explicitly passed again.
@@ -93,6 +90,7 @@ export default {
 
 			return
 		}
+		*/
 
 		document.addEventListener('webviewerloaded', this.handleWebviewerloaded)
 
@@ -192,8 +190,8 @@ export default {
 				const annotationStorage = this.PDFViewerApplication.pdfDocument.annotationStorage
 
 				const onSetModifiedOriginal = annotationStorage.onSetModified
-				annotationStorage.onSetModified = (...args) => {
-					onSetModifiedOriginal(...args)
+				annotationStorage.onSetModified = () => {
+					onSetModifiedOriginal.apply(null, arguments)
 
 					this.getDownloadElement().removeAttribute('disabled')
 				}
@@ -268,7 +266,7 @@ export default {
 				return uploadPdfFile(this.file.filename, data)
 			}).then(() => {
 				logger.info('File uploaded successfully')
-			}).catch((error) => {
+			}).catch(error => {
 				logger.error('Error uploading file:', error)
 
 				showError(t('files_pdfviewer', 'File upload failed.'))
