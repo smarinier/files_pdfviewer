@@ -12,22 +12,20 @@ use OCA\Files_PDFViewer\AppInfo\Application;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\ContentSecurityPolicy;
 use OCP\AppFramework\Http\TemplateResponse;
+use OCP\AppFramework\Services\IAppConfig;
 use OCP\IRequest;
 use OCP\IURLGenerator;
 
 class DisplayController extends Controller {
-
-	/** @var IURLGenerator */
-	private $urlGenerator;
 
 	/**
 	 * @param IRequest $request
 	 * @param IURLGenerator $urlGenerator
 	 */
 	public function __construct(IRequest $request,
-		IURLGenerator $urlGenerator) {
+		private IURLGenerator $urlGenerator,
+		private IAppConfig $appConfig) {
 		parent::__construct(Application::APP_ID, $request);
-		$this->urlGenerator = $urlGenerator;
 	}
 
 	/**
@@ -42,6 +40,10 @@ class DisplayController extends Controller {
 			'urlGenerator' => $this->urlGenerator,
 			'minmode' => $minmode
 		];
+		$spreadMode = strtolower($this->appConfig->getAppValueString('spread_mode', 'none'));
+		if (in_array($spreadMode, ['odd', 'even'])) {
+			$params['spread_mode'] = $spreadMode;
+		}
 
 		$response = new TemplateResponse(Application::APP_ID, 'viewer', $params, 'blank');
 

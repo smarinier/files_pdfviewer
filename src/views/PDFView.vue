@@ -175,6 +175,7 @@ export default {
 
 		initializePDFViewerApplication() {
 			this.PDFViewerApplication = this.$refs.iframe.contentWindow.PDFViewerApplication
+			const PDFViewerApplicationConstants = this.$refs.iframe.contentWindow.PDFViewerApplicationConstants
 
 			this.PDFViewerApplication.save = this.handleSave
 
@@ -197,9 +198,19 @@ export default {
 				}
 			})
 
-			if (this.hideDownload) {
-				const pdfViewer = this.getIframeDocument().querySelector('.pdfViewer')
+			const spreadMode = this.getViewerTemplateParameter('spreadmode') ?? 'none'
+			switch(spreadMode) {
+				case 'odd':
+					this.PDFViewerApplication.pdfViewer.spreadMode = PDFViewerApplicationConstants.SpreadMode.ODD
+					break
+				case 'even':
+					this.PDFViewerApplication.pdfViewer.spreadMode = PDFViewerApplicationConstants.SpreadMode.EVEN
+					break
+			}
 
+			if (this.hideDownload) {
+
+				const pdfViewer = this.getIframeDocument().querySelector('.pdfViewer')
 				if (pdfViewer) {
 					pdfViewer.classList.add('disabledTextSelection')
 				}

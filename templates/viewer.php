@@ -43,6 +43,9 @@ See https://github.com/adobe-type-tools/cmap-resources
         data-enableScripting="<?php p($enableScripting ? true : false) ?>"
         data-sandbox="<?php p($urlGenerator->linkTo('files_pdfviewer', 'js/pdfjs/build/pdf.sandbox.mjs'))?>"
         data-cmapurl="<?php p($urlGenerator->linkTo('files_pdfviewer', 'js/pdfjs/web/cmaps/')) ?>"
+		<?php if (isset($_['spread_mode'])): ?>
+        data-spreadMode="<?php  p($_['spread_mode'])?>"
+		<?php endif; ?>
         data-imageresourcespath="<?php p($urlGenerator->linkTo('files_pdfviewer', 'js/pdfjs/web/images/')) ?>">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
