@@ -168,6 +168,7 @@ export default {
 		initializePDFViewerApplication() {
 			this.PDFViewerApplication = this.$refs.iframe.contentWindow.PDFViewerApplication
 			const PDFViewerApplicationConstants = this.$refs.iframe.contentWindow.PDFViewerApplicationConstants
+			const pdfViewerApplication = this.PDFViewerApplication
 
 			this.PDFViewerApplication.save = this.handleSave
 
@@ -188,7 +189,13 @@ export default {
 
 					this.getDownloadElement().removeAttribute('disabled')
 				}
+
+				if (window.FilesPdfViewerPage !== undefined) {
+					console.log('Jumping to page', window.FilesPdfViewerPage)
+					pdfViewerApplication.page = window.FilesPdfViewerPage;
+				}
 			})
+
 
 			const spreadMode = this.getViewerTemplateParameter('spreadmode') ?? 'none'
 			switch (spreadMode) {
