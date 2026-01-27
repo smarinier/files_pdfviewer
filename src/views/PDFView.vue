@@ -193,6 +193,7 @@ export default {
 				if (window.FilesPdfViewerPage !== undefined) {
 					console.log('Jumping to page', window.FilesPdfViewerPage)
 					pdfViewerApplication.page = window.FilesPdfViewerPage;
+					pdfViewerApplication.setInitialView = function (hash) { /* ignore */ };
 				}
 			})
 
