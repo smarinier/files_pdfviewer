@@ -68,7 +68,7 @@ class TokenService {
 		$transferToken->setTokenId($randToken);
 	}
 
-	private function getTransferTokenFromId(string $token): ?TransferToken {
+	public function getTransferTokenFromId(string $token): ?TransferToken {
 		try {
 			$t = $this->tokenProvider->getToken($token);
 			$transferToken = TransferToken::fromParams($t->getScopeAsArray());

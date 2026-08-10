@@ -5,6 +5,8 @@ namespace OCA\Files_PDFViewer\Controller;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\Response;
+use OCP\AppFramework\Http\Attribute\FrontpageRoute;
+use OCP\AppFramework\Http\Attribute\PublicPage;
 use OCP\IRequest;
 
 class JavaScriptController extends Controller {
@@ -28,9 +30,15 @@ class JavaScriptController extends Controller {
 	 *
 	 * @return Response
 	 */
-	public function page(int $id) {
-		$script = 'window.FilesPdfViewerPage = ' . $id . ";";
+	#[PublicPage]
+	#[FrontpageRoute(verb: 'GET', url: 'js/start')]
+	public function start(int $page = 0, ?string $nameddest = null): Response {
+		$script = 'window.FilesPdfViewerPage = ' . $page . ";";
 
-		return new DataDownloadResponse($script, 'page', 'text/javascript');
+		if ($nameddest !== null) {
+			$script .= 'window.FilesPdfViewerNamedDest = "' . base64_encode($nameddest) . '";';
+		}
+
+		return new DataDownloadResponse($script, 'start', 'text/javascript');
 	}
 }

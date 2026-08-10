@@ -11,7 +11,7 @@
 <script>
 import { showError } from '@nextcloud/dialogs'
 import { getLanguage } from '@nextcloud/l10n'
-import { generateUrl } from '@nextcloud/router'
+import { generateUrl, getBaseUrl } from '@nextcloud/router'
 import logger from '../services/logger.js'
 import uploadPdfFile from '../services/uploadPdfFile.js'
 import axios from '@nextcloud/axios'
@@ -19,7 +19,8 @@ import { getGuestNickname } from '@nextcloud/auth'
 import { getSharingToken } from '@nextcloud/sharing/public'
 import { importKey, decryptChunk } from '../utils/crypto.js'
 import { basename, dirname } from '@nextcloud/paths'
-
+import PDFDestinationsViewer from '../pdfjs/PDFDestinationsViewer.js'
+import { initSideBarDestinationsViewer } from '../pdfjs/sidebar.js'
 export default {
 	name: 'PDFView',
 
@@ -190,11 +191,33 @@ export default {
 					this.getDownloadElement().removeAttribute('disabled')
 				}
 
-				if (window.FilesPdfViewerPage !== undefined) {
-					console.info('Jumping to page', window.FilesPdfViewerPage)
-					pdfViewerApplication.page = window.FilesPdfViewerPage
-					pdfViewerApplication.setInitialView = function(hash) { /* ignore */ }
+				if (window.FilesPdfViewerPage !== undefined || window.FilesPdfViewerNamedDest !== undefined) {
+					// priority to named destination if both are provided, as it is more specific
+					if (window.FilesPdfViewerNamedDest !== undefined) {
+						const namedDest = atob(window.FilesPdfViewerNamedDest)
+						logger.info('Jumping to named destination: ' + namedDest)
+						pdfViewerApplication.pdfLinkService.goToDestination(namedDest)
+					} else
+						if (window.FilesPdfViewerPage !== undefined && window.FilesPdfViewerPage > 0) {
+							logger.info('Jumping to page', window.FilesPdfViewerPage)
+							pdfViewerApplication.page = window.FilesPdfViewerPage
+							pdfViewerApplication.setInitialView = function (hash) { /* ignore */ }
+						}
 				}
+
+				initSideBarDestinationsViewer(pdfViewerApplication, this.getIframeDocument())
+
+				const pdfDestinationsViewer = new PDFDestinationsViewer({
+					container: pdfViewerApplication.pdfSidebar.destinationsView,
+					linkService: pdfViewerApplication.pdfLinkService,
+					fileid: this.fileid,
+					generateUrl,
+					getBaseUrl,
+				});
+
+				pdfDestinationsViewer.render({ pdfDocument: pdfViewerApplication.pdfDocument });
+
+
 			})
 
 			const spreadMode = this.getViewerTemplateParameter('spreadmode') ?? 'none'
@@ -249,6 +272,7 @@ export default {
 			const PDFViewerApplicationOptions = this.$refs.iframe.contentWindow.PDFViewerApplicationOptions
 
 			logger.debug('Initialized files_pdfviewer', PDFViewerApplicationOptions.getAll())
+
 		},
 
 		handleWebviewerloaded() {

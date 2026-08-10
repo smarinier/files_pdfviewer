@@ -79,6 +79,9 @@ See https://github.com/adobe-type-tools/cmap-resources
               <button id="viewOutline" class="toolbarButton" title="Show Document Outline (double-click to expand/collapse all items)" tabindex="3" data-l10n-id="pdfjs-document-outline-button" role="radio" aria-checked="false" aria-controls="outlineView">
                  <span data-l10n-id="pdfjs-document-outline-button-label">Document Outline</span>
               </button>
+              <button id="viewDestinations" class="toolbarButton" title="Show Destinations" tabindex="6" data-l10n-id="pdfjs-destinations-button" role="radio" aria-checked="false" aria-controls="destinationsView">
+                 <span data-l10n-id="pdfjs-destinations-button-label">Destinations</span>
+              </button>
               <button id="viewAttachments" class="toolbarButton" title="Show Attachments" tabindex="4" data-l10n-id="pdfjs-attachments-button" role="radio" aria-checked="false" aria-controls="attachmentsView">
                  <span data-l10n-id="pdfjs-attachments-button-label">Attachments</span>
               </button>
@@ -106,6 +109,8 @@ See https://github.com/adobe-type-tools/cmap-resources
           <div id="attachmentsView" class="hidden">
           </div>
           <div id="layersView" class="hidden">
+          </div>
+          <div id="destinationsView" class="hidden">
           </div>
         </div>
         <div id="sidebarResizer"></div>

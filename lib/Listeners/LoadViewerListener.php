@@ -34,14 +34,22 @@ class LoadViewerListener implements IEventListener {
 		}
 		Util::addScript(Application::APP_ID, 'files_pdfviewer-main', 'viewer');
 		$page = $this->request->getParam('page');
-		if ($page === null) {
+		$nameddest = $this->request->getParam('nameddest');
+		$params = [];
+		if ($page !== null) {
+			$params['page'] = (int)$page;
+		}
+		if ($nameddest !== null) {
+			$params['nameddest'] = $nameddest;
+		}
+		if (empty($params)) {
 			// no file parameter, don't add page script
 			return;
 		}
 		Util::addHeader(
 			'script',
 			[
-				'src' => $this->urlGenerator->linkToRoute('files_pdfviewer.JavaScript.page', ['id' => (int)$page]),
+				'src' => $this->urlGenerator->linkToRoute('files_pdfviewer.JavaScript.start', $params),
 				'nonce' => $this->nonceManager->getNonce(),
 			], ''
 		);

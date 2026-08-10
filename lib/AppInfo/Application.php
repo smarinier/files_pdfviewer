@@ -12,9 +12,7 @@ use OCA\DAV\Events\SabrePluginAddEvent;
 use OCA\Files_PDFViewer\Listeners\CSPListener;
 use OCA\Files_PDFViewer\Listeners\LoadViewerListener;
 use OCA\Files_PDFViewer\Listeners\SabrePluginAddListener;
-
 use OCA\Viewer\Event\LoadViewer;
-
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
@@ -33,8 +31,7 @@ class Application extends App implements IBootstrap {
 	public function register(IRegistrationContext $context): void {
 		$context->registerEventListener(LoadViewer::class, LoadViewerListener::class);
 		$context->registerEventListener(AddContentSecurityPolicyEvent::class, CSPListener::class);
-
-        $context->registerEventListener(SabrePluginAddEvent::class, SabrePluginAddListener::class);
+		$context->registerEventListener(SabrePluginAddEvent::class, SabrePluginAddListener::class);
 	}
 	public function boot(IBootContext $context): void {
 	}
